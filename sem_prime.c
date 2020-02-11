@@ -14,7 +14,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include <sem.h>
+#include "sem.h"
 
 #define MAXPRIME 1000
 

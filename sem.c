@@ -5,7 +5,6 @@
 #include "sem.h"
 #include "thread.h"
 
-
 struct semaphore {
 	/* TODO Phase 1 */
     size_t count;
@@ -43,13 +42,17 @@ int sem_destroy(sem_t sem) {
 
 int sem_down(sem_t sem)
 {
-    if(!sem)
+    enter_critical_section();
+    if(!sem) {
+        exit_critical_section();
         return -1;
+    }
 	/* TODO Phase 1 */
 	if(sem->count > 0)
 	    sem->count--;
 	if (sem->count == 0){
         queue_enqueue(sem->block_list, pthread_self());
+        exit_critical_section();
         thread_block();
 	}
     return 0;
@@ -58,12 +61,16 @@ int sem_down(sem_t sem)
 int sem_up(sem_t sem)
 {
 	/* TODO Phase 1 */
-	if(!sem)
+	enter_critical_section();
+	if(!sem) {
+        exit_critical_section();
         return -1;
+    }
 	sem->count++;
 	if(queue_length(sem->block_list) > 0){
         pthread_t tmp;
 	    queue_dequeue(sem->block_list, (void**)&tmp);
+	    exit_critical_section();
 	    thread_unblock(tmp);
 	}
     return 0;
@@ -72,6 +79,18 @@ int sem_up(sem_t sem)
 int sem_getvalue(sem_t sem, int *sval)
 {
 	/* TODO Phase 1 */
+    if(sem == NULL || sval == NULL){
+        return -1;
+    }
+    if (sem->count > 0){
+        *sval = sem->count;
+    }else
+        *sval = queue_length(sem->block_list);
+    return 0;
+
+
+
+
 
 }
 

@@ -50,6 +50,7 @@ int sem_down(sem_t sem)
 	/* TODO Phase 1 */
 	if(sem->count > 0)
 	    sem->count--;
+
 	if (sem->count == 0){
         queue_enqueue(sem->block_list, pthread_self());
         exit_critical_section();

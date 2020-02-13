@@ -43,38 +43,36 @@ int sem_destroy(sem_t sem) {
 int sem_down(sem_t sem)
 {
     enter_critical_section();
-    if(!sem) {
-        exit_critical_section();
-        return -1;
+    if (!sem) {
+      return -1;
     }
-	/* TODO Phase 1 */
-	if(sem->count > 0)
-	    sem->count--;
-
-	if (sem->count == 0){
-        queue_enqueue(sem->block_list, pthread_self());
-        exit_critical_section();
-        thread_block();
-	}
+  if (sem->count == 0) {
+    queue_enqueue(sem->block_list, pthread_self());
+    thread_block();
+  } else {
+    sem->count--;
+  }
+  exit_critical_section();
     return 0;
 }
 
-int sem_up(sem_t sem)
-{
-	/* TODO Phase 1 */
-	enter_critical_section();
-	if(!sem) {
-        exit_critical_section();
-        return -1;
-    }
-	sem->count++;
-	if(queue_length(sem->block_list) > 0){
-        pthread_t tmp;
-	    queue_dequeue(sem->block_list, (void**)&tmp);
-	    exit_critical_section();
-	    thread_unblock(tmp);
-	}
-    return 0;
+int sem_up(sem_t sem) {
+  /* TODO Phase 1 */
+  enter_critical_section();
+  if (!sem) {
+    exit_critical_section();
+    return -1;
+  }
+  if (queue_length(sem->block_list) != 0) {
+    pthread_t tmp;
+    queue_dequeue(sem->block_list, (void **) &tmp);
+    thread_unblock(tmp);
+  } else {
+    sem->count++;
+  }
+
+  exit_critical_section();
+  return 0;
 }
 
 int sem_getvalue(sem_t sem, int *sval)
@@ -88,10 +86,6 @@ int sem_getvalue(sem_t sem, int *sval)
     }else
         *sval = queue_length(sem->block_list);
     return 0;
-
-
-
-
 
 }
 

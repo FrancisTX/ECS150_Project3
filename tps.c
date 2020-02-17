@@ -53,7 +53,7 @@ int tps_create(void) {
   tps_page *page = malloc(sizeof(tps_page));
   page->tid = pthread_self();
   page->count_storage = malloc(sizeof(count_storage_class));
-  page->count_storage->storage = mmap(NULL, TPS_SIZE, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, 1, 0);
+  page->count_storage->storage = mmap(NULL, TPS_SIZE, PROT_NONE, MAP_ANON | MAP_PRIVATE, 1, 0);
   page->count_storage->count = 1;
   queue_enqueue(tps_queue, (void *) page);
   exit_critical_section();
@@ -85,7 +85,9 @@ int tps_read(size_t offset, size_t length, void *buffer) {
   if (offset + length > TPS_SIZE || target == NULL || buffer == NULL) {
     return -1;
   }
+  mprotect(target->count_storage->storage, TPS_SIZE, PROT_READ);
   memcpy(buffer, target->count_storage->storage + offset, length);
+  mprotect(target->count_storage->storage, TPS_SIZE, PROT_NONE);
   exit_critical_section();
   return 0;
 }
@@ -100,15 +102,19 @@ int tps_write(size_t offset, size_t length, void *buffer) {
 
   if (target->count_storage->count > 1) {
     count_storage_class *new_count_storage = malloc(sizeof(count_storage_class));
-    new_count_storage->storage = mmap(NULL, TPS_SIZE, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, 1, 0);
+    new_count_storage->storage = mmap(NULL, TPS_SIZE, PROT_NONE, MAP_ANON | MAP_PRIVATE, 1, 0);
     new_count_storage->count = 1;
-
+    mprotect(new_count_storage->storage, TPS_SIZE, PROT_WRITE);
+    mprotect(target->count_storage->storage, TPS_SIZE, PROT_READ);
     memcpy(new_count_storage->storage, target->count_storage->storage, TPS_SIZE);
-
+    mprotect(new_count_storage->storage, TPS_SIZE, PROT_NONE);
+    mprotect(target->count_storage->storage, TPS_SIZE, PROT_NONE);
     target->count_storage->count--;
     target->count_storage = new_count_storage;
   }
+  mprotect(target->count_storage->storage, TPS_SIZE, PROT_WRITE);
   memcpy(target->count_storage->storage + offset, buffer, length);
+  mprotect(target->count_storage->storage, TPS_SIZE, PROT_NONE);
   exit_critical_section();
   return 0;
 }

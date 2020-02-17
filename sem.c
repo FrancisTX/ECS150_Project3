@@ -78,6 +78,7 @@ int sem_up(sem_t sem) {
 int sem_getvalue(sem_t sem, int *sval)
 {
 	/* TODO Phase 1 */
+  enter_critical_section();
     if(sem == NULL || sval == NULL){
         return -1;
     }
@@ -85,6 +86,7 @@ int sem_getvalue(sem_t sem, int *sval)
         *sval = sem->count;
     }else
         *sval = queue_length(sem->block_list);
+  exit_critical_section();
     return 0;
 
 }

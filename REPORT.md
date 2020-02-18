@@ -5,22 +5,22 @@ The project aims to simulate the behaviors of Semaphore to synchronize behaviors
 
 # Semaphore
 
-##  Framework and Data Structure
+## Framework and Data Structure
  We define a `struct` called the semaphore which contains the 2 critical components as follows: 
 `size_t count`
 `queue_t block_list`
-Count indicates how many units are available, and the block_list contains all tid which  are blocked due to the shortage of the resource. The block list works as a queue.
+Count indicates how many units are available, and the block\_list contains all tid which  are blocked due to the shortage of the resource. The block list works as a queue.
 
 
 ## `sem_create(size_t count)`
-In this function, We need to initialize the semaphore structure here. It is very straightforward. We just use `queue_create()` to create the block_list and set the `count` as the initial value of the `count` which indicates how many resources are available initially. 
+In this function, We need to initialize the semaphore structure here. It is very straightforward. We just use `queue_create()` to create the block\_list and set the `count` as the initial value of the `count` which indicates how many resources are available initially. 
 
 ## `sem_destory()`
 Here, we first determine if the `sem` is `NULL` and the `block_list` still contains elements. If so, we need to return -1. Otherwise, we need to destroy the semaphore structure. We use the `queue_destroy()` to destroy the `block_list` and then free `sem`. We free the `sem` because the `sem` is also created by `malloc()`. 
 
 
-##  `sem_down(sem_t sem)`
-When the function is called, the thread decreases the available resource. If there are no resources available (when count != 0), we block the current thread from running through the interface provided thread library. The thread `tid` is added to the blocked list, and until `sem_up()` is called and the thread is selected to unblock, the thread should remain blocked. Also, else_if structure ensures the count will never be below zero.
+## `sem_down(sem_t sem)`
+When the function is called, the thread decreases the available resource. If there are no resources available (when count != 0), we block the current thread from running through the interface provided thread library. The thread `tid` is added to the blocked list, and until `sem_up()` is called and the thread is selected to unblock, the thread should remain blocked. Also, else\_if structure ensures the count will never be below zero.
 
 ## `sem_up(sem_t sem)`
 The `sem_up()` is releasing the available source to the next thread. What we are doing here is checking if the `block_list` still contains elements. If there is, we use the `queue_dequeue()` to return the oldest blocked thread from the `block_list` and unblock this thread with `thread_unblock()`. If there is not, we add `count` by one, because there will be one more available source in semaphore.
@@ -34,23 +34,21 @@ The function returns how many resources are available. If the internal count is 
 
 Inspired by `std::shared_ptr` we define two structure as follow:
 
-```
-typedef struct count_storage_class {
-  void *storage;
-  size_t count;
-} count_storage_class;
-
-typedef struct tps_page {
-  pthread_t tid;
-  count_storage_class *count_storage;
-} tps_page;
-```
-The ``count_storage_class`` contains an actual page and a counter which number shows how many threads are pointed to the count_storage unit. This kind of design gives the programm page sharing feature among threads because multiple tps pages can point to the same storage unit.  
+	typedef struct count_storage_class {
+	  void *storage;
+	  size_t count;
+	} count_storage_class;
+	
+	typedef struct tps_page {
+	  pthread_t tid;
+	  count_storage_class *count_storage;
+	} tps_page;
+The `count_storage_class` contains an actual page and a counter which number shows how many threads are pointed to the count\_storage unit. This kind of design gives the programm page sharing feature among threads because multiple tps pages can point to the same storage unit.  
 
 ### e.g
- tps_page 1--> CSC1
-tps_page 2 --> CSC1
-tps_page 3 --> CSC1
+ tps\_page 1--\> CSC1
+tps\_page 2 --\> CSC1
+tps\_page 3 --\> CSC1
 
 And count is three now.
 
@@ -70,4 +68,7 @@ Before destroying a TPS, we also need to go through all the pages in `tps_queue`
 Before we read from the memory page, we need to find the page with a specific `tid` like we did in the previous function. If the page exists, we can take the next step. We need to determine if the reading size is out of the page’s bound (`TPS_SIZE`) and if the buffer is null. Then, we can do the reading using the `memcpy()`, because this function can copy from a source file (the beginning of the memory page) a specific length (`length`) from a specific position (`offset`) to a destination file (`buffer`). That is just what we need here.
 
 ## `tps_write()`
-In the `tps_write()`, we almost do the same thing, check if `tid` exists, if the page size after writing will over the `TPS_SIZE` and if the buffer is NULL. Then, we use the `memcpy()` to write the data in `buffer` to the memory page from the position `offset`. The most different point from the `tps_read()` is that we also need to check if the current thread shares this memory page with other threads. If there are more than one thread using this one page, we need to copy-on-write. 
+In the `tps_write()`, we almost do the same thing, check if `tid` exists, if the page size after writing will over the `TPS_SIZE` and if the buffer is NULL. Then, we use the `memcpy()` to write the data in `buffer` to the memory page from the position `offset`. The most different point from the `tps_read()` is that we also need to check if the current thread shares this memory page with other threads. If there are more than one thread using this one page, we need to copy-on-write.
+
+## `tps_clone()`
+Before we clone the thread’s `TPS`, we need to check if the given thread has a `TPS` in the queue by using `queue_iteratet()`. If the thread’s `TPS` is not in the queue, we cannot clone it. Also, we need to check whether the current thread (the thread who calling the `tps_clone`) have already had a `TPS` in the queue, using `queue_iterate` as well. If there is not, we can step into clone. First we create a new `TPS` and store it in the heap. Then, setting up the value in `TPS`, the `tid` should be the current thread’s `tid` and the memory page is just the given thread’s memory page. Finally, we `queue_enqueue` this `TPS` in to the `tps_queue`.

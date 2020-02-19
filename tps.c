@@ -37,8 +37,57 @@ static int find_page(void *data, void *arg) {
   return 0;
 }
 
+static int find_fault_address(void* fault_address, void* page){
+    tps_page *current_page = (tps_page *) page;
+
+    if (fault_address == current_page->count_storage->storage){
+        return 1;
+    }
+    return 0;
+}
+
+static void segv_handler(int sig, siginfo_t *si,  __attribute__((unused)) void *context)
+{
+    tps_page *current_page= NULL;
+    /*
+     * Get the address corresponding to the beginning of the page where the
+     * fault occurred
+     */
+    void *p_fault = (void*)((uintptr_t)si->si_addr & ~(TPS_SIZE - 1));
+
+    /*
+     * Iterate through all the TPS areas and find if p_fault matches one of them
+     */
+
+    queue_iterate(tps_queue,find_fault_address, p_fault, (void**)&current_page);
+
+    if (current_page)
+        /* Printf the following error message */
+        fprintf(stderr, "TPS protection error!\n");
+
+    /* In any case, restore the default signal handlers */
+    signal(SIGSEGV, SIG_DFL);
+    signal(SIGBUS, SIG_DFL);
+    /* And transmit the signal again in order to cause the program to crash */
+    raise(sig);
+}
+
 int tps_init(int segv) {
   /* TODO: Phase 2 */
+    if (tps_queue)
+        return -1;
+
+    tps_queue = queue_create();
+    if (!tps_queue)
+        return -1;
+
+    if (segv) {
+        struct sigaction sa;
+        sigemptyset(&sa.sa_mask);
+        sa.sa_flags = SA_SIGINFO;
+        sa.sa_sigaction = segv_handler;
+        sigaction(SIGBUS, &sa, NULL);
+        sigaction(SIGSEGV, &sa, NULL);
 }
 
 int tps_create(void) {
@@ -128,12 +177,10 @@ int tps_clone(pthread_t tid) {
   tps_page *target = NULL;
   queue_iterate(tps_queue, find_page, tid, (void **) &target);
 
-  if (self) {
+  if (self || !target) {
     return -1;
   }
-  if (!target) {
-    return -1;
-  }
+  
   tps_page *page = malloc(sizeof(tps_page));
   page->tid = pthread_self();
   page->count_storage = malloc(sizeof(count_storage_class));

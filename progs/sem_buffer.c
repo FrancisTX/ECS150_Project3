@@ -6,6 +6,7 @@
  * be different. The synchronization is managed through two semaphores.
  */
 
+
 #include <limits.h>
 #include <pthread.h>
 #include <stdio.h>

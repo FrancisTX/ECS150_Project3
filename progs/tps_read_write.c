@@ -10,7 +10,7 @@
 #include "thread.h"
 #include "queue.h"
 #include "tps.h"
-
+/*
 #define TEST_ASSERT(assert)            \
 do {                        \
     printf("ASSERT: " #assert " ... ");    \
@@ -21,14 +21,14 @@ do {                        \
         exit(1);            \
     }                    \
 } while(0)
-
+*/
 void *test_write_and_read() {                             //tid[1]
   tps_create();
   char sample[] = "hello";
   char sample_from_read[strlen(sample)];
   tps_write(0, strlen(sample), sample);
   tps_read(0, strlen(sample), sample_from_read);
-  TEST_ASSERT(strcmp(sample, sample_from_read));
+  assert(!memcmp(sample, sample_from_read,5));
 
   return NULL;
 }
@@ -38,7 +38,7 @@ void *test_write_and_read_offset() {                     //tid[2]
   char sample[] = "hello ECS_150";
   char sample_from_read[strlen(sample)];
   tps_read(7, strlen(sample), sample_from_read);
-  TEST_ASSERT(strcmp("ECS_150", sample_from_read));
+  assert(!memcmp("ECS_150", sample_from_read, 7));
 
   return NULL;
 }
@@ -48,11 +48,11 @@ void *test_clone(pthread_t clone_tid){                   //tid[3]
   char write_to_memory[] = " Winter";
   tps_clone(clone_tid);
   tps_read(0, strlen(buffer), buffer);
-  TEST_ASSERT(strcmp("hello", buffer));
+  assert(!memcmp("hello", buffer, 5));
 
   tps_write(6, strlen(write_to_memory), write_to_memory);
   tps_read(0, strlen(buffer), buffer);
-  TEST_ASSERT(strcmp("hello Winter", buffer));
+  assert(!memcmp("hello Winter", buffer,12));
 
   return 0;
 }

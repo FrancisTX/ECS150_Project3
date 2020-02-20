@@ -20,10 +20,10 @@ Here, we first determine if the `sem` is `NULL` and the `block_list` still conta
 
 
 ## `sem_down(sem_t sem)`
-When the function is called, the thread decreases the available resource. If there are no resources available (when count != 0), we block the current thread from running through the interface provided thread library. The thread `tid` is added to the blocked list, and until `sem_up()` is called and the thread is selected to unblock, the thread should remain blocked. Also, else\_if structure ensures the count will never be below zero.
+When the function is called, the thread decreases the available resource. If there are no resources available (when count != 0), we block the current thread from running through the interface provided thread library. The thread `tid` is added to the blocked list, and until `sem_up()` is called and the thread is selected to unblock, the thread should remain blocked（we aviod the corner case by a while loop, if the resource was taken by other thread, the original thread which was blocked go to sleep).
 
 ## `sem_up(sem_t sem)`
-The `sem_up()` is releasing the available source to the next thread. What we are doing here is checking if the `block_list` still contains elements. If there is, we use the `queue_dequeue()` to return the oldest blocked thread from the `block_list` and unblock this thread with `thread_unblock()`. If there is not, we add `count` by one, because there will be one more available source in semaphore.
+The `sem_up()` is releasing the available source to the next thread. What we are doing here is checking if the `block_list` still contains elements. If there is, we use the `queue_dequeue()` to return the oldest blocked thread from the`block_list` and unblock this thread with `thread_unblock()`. If there is not, we add `count` by one, because there will be one more available source in semaphore.
 
 ## `sem_getvalue()`
 The function returns how many resources are available. If the internal count is 0, which means there is a non-negative count waiting block queue. The function will return a non positive number which shows how many threads are waiting for resources. If the internal count is positive the function assign this number to the retval. 

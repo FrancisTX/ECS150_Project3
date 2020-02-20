@@ -30,9 +30,10 @@ void* my_thread(){
 
       /* Get TPS page address as allocated via mmap() */
       char *tps_addr = latest_mmap_addr;
-
+     
       /* Cause an intentional TPS protection error */
       tps_addr[0] = 0;
+      
       return NULL;
 }
 
@@ -57,7 +58,7 @@ int main(){
       sem2 = sem_create(0);
 
       pthread_t tid;
-      tps_init(0);
+      tps_init(1);
 
       pthread_create(&tid, NULL, (void*)thread1, NULL);
       pthread_join(tid, NULL);

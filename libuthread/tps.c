@@ -73,7 +73,7 @@ static void segv_handler(int sig, siginfo_t *si,  __attribute__((unused)) void *
 }
 
 int tps_init(int segv) {
-
+  /* TODO: Phase 2 */
     if (tps_queue)
         return -1;
 
@@ -105,11 +105,6 @@ int tps_create(void) {
   page->tid = pthread_self();
   page->count_storage = malloc(sizeof(count_storage_class));
   page->count_storage->storage = mmap(NULL, TPS_SIZE, PROT_NONE, MAP_ANON | MAP_PRIVATE, 1, 0);
-  /*allocate actual page*/
-  if(page->count_storage->storage == MAP_FAILED){
-    perror();
-    return -1;
-  }
   page->count_storage->count = 1;
   queue_enqueue(tps_queue, (void *) page);
   exit_critical_section();
@@ -117,7 +112,7 @@ int tps_create(void) {
 }
 
 int tps_destroy(void) {
-  
+  /* TODO: Phase 2 */
   enter_critical_section();
   tps_page *target = NULL;
   queue_iterate(tps_queue, find_page, (void *)pthread_self(), (void **) &target);
@@ -125,11 +120,7 @@ int tps_destroy(void) {
     return -1;
   }
   if (target->count_storage->count == 1) {
-    if(!munmap(target->count_storage->storage, TPS_SIZE)){
-      //if the munmap failed
-      perror();
-      return -1;
-    }
+    munmap(target->count_storage->storage, TPS_SIZE);
     free(target->count_storage);
   }
   queue_delete(tps_queue, (void **)pthread_self());
@@ -143,7 +134,6 @@ int tps_read(size_t offset, size_t length, void *buffer) {
   tps_page *target = NULL;
   queue_iterate(tps_queue, find_page, (void *)pthread_self(), (void **) &target);
   if (offset + length > TPS_SIZE || target == NULL || buffer == NULL) {
-    //intercept null ptrs and out of bound parameter
     return -1;
   }
   mprotect(target->count_storage->storage, TPS_SIZE, PROT_READ);
@@ -156,20 +146,14 @@ int tps_read(size_t offset, size_t length, void *buffer) {
 int tps_write(size_t offset, size_t length, void *buffer) {
   enter_critical_section();
   tps_page *target = NULL;
-  /*find the page for current thread*/
   queue_iterate(tps_queue, find_page, (void *)pthread_self(), (void **) &target);
   if (offset + length > TPS_SIZE || target == NULL || buffer == NULL) {
-    //intercept null ptrs and out of bound parameter
     return -1;
   }
-  /*copy on write*/
+
   if (target->count_storage->count > 1) {
     count_storage_class *new_count_storage = malloc(sizeof(count_storage_class));
     new_count_storage->storage = mmap(NULL, TPS_SIZE, PROT_NONE, MAP_ANON | MAP_PRIVATE, 1, 0);
-    if(new_count_storage->storage == MAP_FAILED){
-      perror();
-      return -1;
-    }
     new_count_storage->count = 1;
     mprotect(new_count_storage->storage, TPS_SIZE, PROT_WRITE);
     mprotect(target->count_storage->storage, TPS_SIZE, PROT_READ);
@@ -199,7 +183,6 @@ int tps_clone(pthread_t tid) {
     return -1;
   }
   
-
   tps_page *page = malloc(sizeof(tps_page));
   page->tid = pthread_self();
   page->count_storage = malloc(sizeof(count_storage_class));

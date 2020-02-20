@@ -85,7 +85,7 @@ int sem_getvalue(sem_t sem, int *sval)
     if (sem->count > 0){
         *sval = sem->count;
     }else
-        *sval = queue_length(sem->block_list);
+        *sval = -queue_length(sem->block_list);
   exit_critical_section();
     return 0;
 

@@ -1,7 +1,3 @@
-//
-// Created by Zhecheng Huang on 2/17/20.
-//
-
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
@@ -23,42 +19,50 @@ do {                        \
 } while(0)
 
 static sem_t sem1, sem2;
+static char sample[TPS_SIZE] = "hello";
+static char sample_2[TPS_SIZE] = "hello Winter";
+static pthread_t tid;
 
-void *test_clone(pthread_t clone_tid){
-  char buffer[TPS_SIZE];             //clone the thread whose tid is 1 
+void *test_clone(){
+  char buffer[TPS_SIZE];            
   char write_to_memory[] = " Winter";
 
   /*clone previous thread tps and test the memoery page*/
-  tps_clone(clone_tid);
+  tps_clone(tid);
   tps_read(0, TPS_SIZE, buffer);
-  TEST_ASSERT(strcmp("hello", buffer));
+  TEST_ASSERT(!memcmp(sample, buffer,TPS_SIZE));
 
   /*write on the current tps's memory page*/
-  tps_write(6, strlen(write_to_memory), write_to_memory);
+  tps_write(5, 7, write_to_memory);
   tps_read(0, TPS_SIZE, buffer);
-  TEST_ASSERT(strcmp("hello Winter", buffer));
-
-  sem_up(sem1);
-
-  return 0;
-}
-void *test_write_and_read() {  
-  pthread_t tid;	
-  tps_create();
-  char sample[] = "hello";
-  char sample_from_read[strlen(sample)];
-  tps_write(0, strlen(sample), sample);                  //write "hello" in the memory page
-  tps_read(0, strlen(sample), sample_from_read);
-  TEST_ASSERT(strcmp(sample, sample_from_read));
+  TEST_ASSERT(!memcmp(sample_2, buffer,TPS_SIZE));
   
-  pthread_create(&tid, NULL, (void*) test_clone, (void*)&tid);
-  sem_down(sem1);                                        //block this thread and go to test_clone()
+  tps_destroy();
+  sem_up(sem1);
+  
+  return NULL;
+}
+void *test_write_and_read() {  	
+  pthread_t tid_clone;
+  tps_create();
+  char sample_from_read[TPS_SIZE];
+
+  /*write "hello" in the memory page and read*/
+  tps_write(0, TPS_SIZE, sample);                 
+  tps_read(0, TPS_SIZE, sample_from_read);
+  TEST_ASSERT(!memcmp(sample, sample_from_read, TPS_SIZE));
+  
+  pthread_create(&tid_clone, NULL, (void*) test_clone, NULL);
+ 
+  /*block this thread and go to test_clone()*/
+  sem_down(sem1);                                        
   
   /*Wait for test_clone die, and check if the tps of current thread are modified*/
-  pthread_join(tid, NULL);
-
-  tps_read(0, strlen(sample), sample_from_read);
-  TEST_ASSERT(strcmp(sample, sample_from_read));
+  pthread_join(tid_clone, NULL);
+   
+  
+  tps_read(0, TPS_SIZE, sample_from_read);
+  TEST_ASSERT(!memcmp(sample, sample_from_read, TPS_SIZE));
 
   tps_destroy();
   return NULL;
@@ -68,9 +72,9 @@ int main() {
   sem1 = sem_create(0);
   sem2 = sem_create(0);
 
-  pthread_t tid;
   tps_init(0);
-
+  
+  /*go to the teat_write_read()*/
   pthread_create(&tid, NULL, (void*)test_write_and_read, NULL);
   pthread_join(tid, NULL);
 

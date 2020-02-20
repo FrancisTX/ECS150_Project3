@@ -1,16 +1,13 @@
-//
-// Created by Zhecheng Huang on 2/17/20.
-//
-
 #include <assert.h>
+#include <limits.h>
+#include <pthread.h>
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
+
+#include <tps.h>
 #include <sem.h>
-#include "thread.h"
-#include "queue.h"
-#include "tps.h"
-/*
+
 #define TEST_ASSERT(assert)            \
 do {                        \
     printf("ASSERT: " #assert " ... ");    \
@@ -21,60 +18,68 @@ do {                        \
         exit(1);            \
     }                    \
 } while(0)
-*/
-void *test_write_and_read() {                             //tid[1]
-  tps_create();
-  char sample[] = "hello";
-  char sample_from_read[strlen(sample)];
-  tps_write(0, strlen(sample), sample);
-  tps_read(0, strlen(sample), sample_from_read);
-  assert(!memcmp(sample, sample_from_read,5));
 
-  return NULL;
-}
-
-void *test_write_and_read_offset() {                     //tid[2]
-  tps_create();
-  char sample[] = "hello ECS_150";
-  char sample_from_read[strlen(sample)];
-  tps_read(7, strlen(sample), sample_from_read);
-  assert(!memcmp("ECS_150", sample_from_read, 7));
-
-  return NULL;
-}
-
-void *test_clone(pthread_t clone_tid){                   //tid[3]
-  char buffer[10];             //clone the thread whose tid is 1 
+void *test_clone(pthread_t clone_tid){                  
+  char buffer[20];             
   char write_to_memory[] = " Winter";
+
+  /*clone "hello ECS_150" and read it*/
   tps_clone(clone_tid);
-  tps_read(0, strlen(buffer), buffer);
-  assert(!memcmp("hello", buffer, 5));
+  tps_read(0, 12, buffer);
+  TEST_ASSERT(!memcmp("hello ECS_150", buffer, 12));
 
-  tps_write(6, strlen(write_to_memory), write_to_memory);
-  tps_read(0, strlen(buffer), buffer);
-  assert(!memcmp("hello Winter", buffer,12));
+  /*write " Winter" behind and read it*/
+  tps_write(13, strlen(write_to_memory), write_to_memory);
+  tps_read(0, 19, buffer);
+  TEST_ASSERT(!memcmp("hello ECS_150 Winter", buffer,19));
 
-  return 0;
+  return NULL;
 }
-int main() {
-  pthread_t tid[100];
-  tps_init(0);
 
-  pthread_create(&tid[1], NULL, (void*)test_write_and_read, NULL);
-  pthread_join(tid[1], NULL);
+void *test_write_and_read_offset() {                   
+  pthread_t tid;
+  tps_create();
+  char sample[TPS_SIZE] = "hello ECS_150\n";
+  char sample_from_read[7];
+  
+  /*write "hello ECS_150" into the mem page and read it fore offset 6*/ 
+  tps_write(0, TPS_SIZE, sample);
+  tps_read(6, 7, sample_from_read);
+  TEST_ASSERT(!memcmp("ECS_150", sample_from_read, 7));
 
-  pthread_create(&tid[2], NULL, (void*)test_write_and_read_offset, NULL);
-  pthread_join(tid[2], NULL);
+  /*go to test_clone*/
+  pthread_create(&tid, NULL, (void*)test_clone, (void *)pthread_self());
+  pthread_join(tid, NULL);
 
-  pthread_create(&tid[3], NULL, (void *)test_clone, &tid[1]);
-  pthread_join(tid[3], NULL);
+  return NULL;
+}
 
-  //pthread_create(&tid[4], NULL, test_write_and_read_offset, NULL);
-  //pthread_join(tid[4], NULL);
+void *test_write_and_read() {                          
+  pthread_t tid;
+  tps_create();
+  char sample[TPS_SIZE] = "hello\n";
+  char sample_from_read[TPS_SIZE];
 
-
+  /*write "hello" and read it from mem page*/
+  tps_write(0, TPS_SIZE, sample);
+  tps_read(0,TPS_SIZE, sample_from_read);
+  TEST_ASSERT(!memcmp(sample, sample_from_read,TPS_SIZE));
+ 
+  /*go to test_write_and_read_offset*/
+  pthread_create(&tid, NULL, (void*)test_write_and_read_offset, NULL);
+  pthread_join(tid, NULL);
 
   
+  return NULL;
+}
+
+int main() {
+  pthread_t tid;
+  tps_init(0);
+
+  /*go the test_write_and_read*/
+  pthread_create(&tid, NULL, (void*)test_write_and_read, NULL);
+  pthread_join(tid, NULL);
 
   return 0;
 }

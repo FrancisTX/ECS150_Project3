@@ -22,6 +22,7 @@ void *__wrap_mmap(void *addr, size_t len, int prot, int flags, int fildes, off_t
 }
 
 static char msg1[TPS_SIZE] = "Hello world!\n";
+
 static sem_t sem1, sem2;
 
 void* my_thread(){
@@ -30,15 +31,15 @@ void* my_thread(){
 
       /* Get TPS page address as allocated via mmap() */
       char *tps_addr = latest_mmap_addr;
-
+     
       /* Cause an intentional TPS protection error */
       tps_addr[0] = 0;
+      
       return NULL;
 }
 
 void* thread1(){
       pthread_t tid;
-      // char *buffer = malloc(TPS_SIZE);
 
       /* Create TPS and initialize with *msg1 */
       tps_create();
@@ -48,7 +49,6 @@ void* thread1(){
       pthread_join(tid, NULL);
 
       tps_destroy();
-      // free(buffer);
       return NULL;      
 }
 
@@ -57,8 +57,9 @@ int main(){
       sem2 = sem_create(0);
 
       pthread_t tid;
-      tps_init(0);
+      tps_init(1);
 
+      /*go to the thread1*/
       pthread_create(&tid, NULL, (void*)thread1, NULL);
       pthread_join(tid, NULL);
 

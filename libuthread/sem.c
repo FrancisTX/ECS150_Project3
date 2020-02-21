@@ -39,8 +39,7 @@ int sem_destroy(sem_t sem) {
         queue_destroy(sem->block_list);
         free(sem);
     }
-
-	return 0;
+        return 0;
 }
 
 int sem_down(sem_t sem)
@@ -54,6 +53,8 @@ int sem_down(sem_t sem)
     /*
      *if there is no resource, block the current thread
      *if there is, count minus one
+     *count for counting times of entering the loop
+     *while loop is for the corner case (explain in the report)
      */
     int count = 0;
     while (sem->count == 0) {
@@ -63,10 +64,8 @@ int sem_down(sem_t sem)
         thread_block();
         count ++;
         }
-
-       
     }     
-        sem->count--;
+    sem->count--;
     
     exit_critical_section();
     return 0;
@@ -88,9 +87,8 @@ int sem_up(sem_t sem) {
       queue_dequeue(sem->block_list, (void **) &tmp);
       thread_unblock(tmp);
   }
-      sem->count++;
-  
-
+	
+  sem->count++;
   exit_critical_section();
   return 0;
 }
@@ -108,7 +106,6 @@ int sem_getvalue(sem_t sem, int *sval)
    *if there are available resources, return the count
    *if there is not, return negative length of the queue
    */
-
   if (sem->count > 0){
      *sval = sem->count;
   }else

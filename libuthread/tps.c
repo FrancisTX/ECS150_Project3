@@ -114,6 +114,10 @@ int tps_create(void) {
     page->count_storage->storage = mmap(NULL, TPS_SIZE, PROT_NONE, MAP_ANON | MAP_PRIVATE, 1, 0);
     page->count_storage->count = 1;
 
+    if(page->count_storage = NULL){
+        return -1;
+    }
+
     /*put the tps into the tps_queue*/
     queue_enqueue(tps_queue, (void *) page);
     exit_critical_section();

@@ -25,7 +25,8 @@ sem_t sem_create(size_t count)
     /*initialize the sem*/
     sem->count = count;
     sem->block_list = queue_create();
-
+    
+    free(sem);
     return sem;
 }
 

@@ -8,7 +8,11 @@ programs := \
         tps_simple.x \
 	tps_read_write.x \
         tps_clone.x \
-        tps_protect.x	
+        tps_protect.x \
+        tps_structure.x	\
+		tps_big_input_test.x \
+		tps_double_destroy.x \
+		tps_double_create.x 
 
 ## *** IMPORTANT *** ##
 ##	You should NOT have to modify anything below

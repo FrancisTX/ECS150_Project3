@@ -15,7 +15,6 @@ DEPFLAGS = -MMD -MF $(@:.o=.d)
 all: $(lib)
 
 $(lib): $(o_file) $(compiled_ofile)
-#	@echo "MAKE $@"
 	ar rcs $@ $^
 
 %.o: %.c

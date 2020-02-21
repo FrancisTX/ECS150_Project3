@@ -55,14 +55,15 @@ int sem_down(sem_t sem)
      *if there is no resource, block the current thread
      *if there is, count minus one
      */
+
     if (sem->count == 0) {
-          enter_critical_section();
-          queue_enqueue(sem->block_list, (void*)pthread_self());
-          thread_block();
-          exit_critical_section();
+        enter_critical_section();
+        queue_enqueue(sem->block_list, (void*)pthread_self());
+        thread_block();
+        exit_critical_section();
     }else     
-          sem->count--;
-  
+        sem->count--;
+    
     exit_critical_section();
     return 0;
 }

@@ -139,7 +139,7 @@ int tps_destroy(void) {
         munmap(target->count_storage->storage, TPS_SIZE);
         free(target->count_storage);
     }
-    queue_delete(tps_queue, (void **)pthread_self());
+    queue_delete(tps_queue, (void *)target);
     exit_critical_section();
     return 0;
 }

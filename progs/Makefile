@@ -8,7 +8,8 @@ programs := \
         tps_simple.x \
 	tps_read_write.x \
         tps_clone.x \
-        tps_protect.x	
+        tps_protect.x \
+        tps_structure.x	
 
 ## *** IMPORTANT *** ##
 ##	You should NOT have to modify anything below
